@@ -1,0 +1,7 @@
+version: "3"
+
+services:
+  relay:
+    image: scsibug/nostr-rs-relay:latest
+    ports:
+      - "8080:8080"
