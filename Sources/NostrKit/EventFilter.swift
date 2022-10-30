@@ -51,6 +51,7 @@ public struct EventFilter: Encodable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(ids, forKey: .ids)
         try container.encodeIfPresent(authors, forKey: .authors)
+        try container.encodeIfPresent(eventKinds, forKey: .eventKinds)
         try container.encodeIfPresent(since, forKey: .since)
         try container.encodeIfPresent(until, forKey: .until)
         try container.encodeIfPresent(limit, forKey: .limit)
@@ -59,6 +60,5 @@ public struct EventFilter: Encodable {
         for (id, value) in tags ?? [:] {
             try tagsContainer.encode(value, forKey: .init(stringValue: "#\(id)")!)
         }
-        
     }
 }
