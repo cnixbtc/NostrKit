@@ -38,10 +38,6 @@ public struct Relay {
             }
             
             socket.onConnect = {
-                socket.onDisconnect = { error in
-                    continuation.resume(with: .failure(RelayError.socketError(error)))
-                }
-                
                 continuation.resume()
             }
             
