@@ -4,10 +4,12 @@ import Starscream
 public enum RelayError: Error {
     case cannotConnect(Error?)
     case socketError(Error?)
+    case writeError(Error?)
 }
 
 public protocol RelayDelegate: AnyObject {
-    func recevied(message: RelayMessage)
+    func received(message: RelayMessage)
+    func disconnected(error: RelayError)
 }
 
 public struct Relay {
@@ -16,11 +18,15 @@ public struct Relay {
     
     public weak var delegate: RelayDelegate?
     public var eventCallback: ((RelayMessage) -> Void)?
+    public var disconnectCallback: ((RelayError) -> Void)?
     
-    public init(url: URL, delegate: RelayDelegate? = nil, onEvent eventCallback: ((RelayMessage) -> Void)? = nil) {
+    public init(url: URL, delegate: RelayDelegate? = nil,
+                onEvent eventCallback: ((RelayMessage) -> Void)? = nil,
+                onDisconnect disconnectCallback: ((RelayError) -> Void)? = nil) {
         self.url = url
         self.delegate = delegate
         self.eventCallback = eventCallback
+        self.disconnectCallback = disconnectCallback
         
         socket = WebSocket(url: url)
     }
@@ -29,12 +35,13 @@ public struct Relay {
         return try await withCheckedThrowingContinuation { continuation in
             socket.onText = { text in
                 guard let message = try? RelayMessage(text: text) else { return }
-                delegate?.recevied(message: message)
+                delegate?.received(message: message)
                 eventCallback?(message)
             }
             
             socket.onDisconnect = { error in
-                continuation.resume(with: .failure(RelayError.cannotConnect(error)))
+                delegate?.disconnected(error: RelayError.socketError(error))
+                disconnectCallback?(RelayError.socketError(error))
             }
             
             socket.onConnect = {
@@ -59,23 +66,22 @@ public struct Relay {
     
     func send(message: ClientMessage) async throws {
         return try await withCheckedThrowingContinuation { continuation in
-            print(try! message.string())
-            socket.write(string: try! message.string()) {
+            if socket.isConnected {
+                do {
+                    let message = try message.string()
+                    socket.write(string: message) {
+                        continuation.resume()
+                    }
+                } catch {
+                    continuation.resume(throwing: RelayError.writeError(error))
+                }
+            } else {
                 continuation.resume()
             }
         }
     }
     
-    public func disconnect() async throws {
-        return try await withCheckedThrowingContinuation { continuation in
-            socket.onDisconnect = { error in
-                if let error = error {
-                    continuation.resume(with: .failure(RelayError.socketError(error)))
-                } else {
-                    continuation.resume()
-                }
-            }
-            socket.disconnect()
-        }
+    public func disconnect() {
+        socket.disconnect()
     }
 }
