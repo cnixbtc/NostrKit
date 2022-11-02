@@ -76,7 +76,7 @@ public struct Relay {
                     continuation.resume(throwing: RelayError.writeError(error))
                 }
             } else {
-                continuation.resume()
+                continuation.resume(throwing: RelayError.socketError(nil))
             }
         }
     }

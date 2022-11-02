@@ -8,7 +8,7 @@ public enum EventError: Error {
     case signingFailed
 }
 
-public enum EventKind: Codable {
+public enum EventKind: Codable, Equatable {
     case setMetadata
     case textNote
     case recommentServer

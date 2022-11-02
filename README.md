@@ -19,11 +19,7 @@ NostrKit can be used to publish events on a Nostr relay as well as request event
 
 ``` swift
 let keyPair = try KeyPair(privateKey: "<hex>")
-let relay = Relay(url: URL("<url>")!, 
-                  onEvent: { print($0) },
-                  onDisconnect: { error in 
-                      // Handle reconnecting here if needed
-                  })
+let relay = Relay(url: URL("<url>")!, onEvent: { print($0) })
 
 let subscription = Subscription(filters: [
     .init(authors: [keyPair.publicKey])
