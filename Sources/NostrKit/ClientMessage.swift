@@ -1,11 +1,11 @@
 import Foundation
 
-enum ClientMessage: Encodable {
+public enum ClientMessage: Encodable {
     case event(Event)
     case subscribe(Subscription)
     case unsubscribe(SubscriptionId)
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
         
         switch self {
@@ -22,7 +22,7 @@ enum ClientMessage: Encodable {
         }
     }
     
-    func string() throws -> String {
+    public func string() throws -> String {
         return String(data: try JSONEncoder().encode(self), encoding: .utf8)!
     }
 }

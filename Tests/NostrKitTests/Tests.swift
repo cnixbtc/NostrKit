@@ -11,7 +11,8 @@ final class Tests: XCTestCase {
                 ids: ["foo"],
                 authors: ["bar"],
                 eventKinds: [.textNote],
-                tags: ["e": ["foo", "bar"], "p": ["bar", "foo"]],
+                eventTags: ["foo", "bar"],
+                pubKeyTags: ["bar", "foo"],
                 since: now,
                 until: then,
                 limit: 10)

@@ -16,24 +16,20 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/GigaBitcoin/secp256k1.swift", exact: .init(stringLiteral: "0.8.1")),
         .package(url: "https://github.com/apple/swift-crypto.git", exact: .init(stringLiteral: "2.1.0")),
-        .package(url: "https://github.com/daltoniam/Starscream", exact: .init(stringLiteral: "3.1.1")),
     ],
     targets: [
         .target(name: "NostrKit", dependencies: [
             .product(name: "secp256k1", package: "secp256k1.swift"),
             .product(name: "Crypto", package: "swift-crypto"),
-            .product(name: "Starscream", package: "Starscream"),
         ]),
         .testTarget(name: "NostrKitTests", dependencies: [
             .target(name: "NostrKit"),
         ]),
         .executableTarget(name: "ExampleReader", dependencies: [
             .target(name: "NostrKit"),
-            .product(name: "Starscream", package: "Starscream"),
         ]),
         .executableTarget(name: "ExampleWriter", dependencies: [
             .target(name: "NostrKit"),
-            .product(name: "Starscream", package: "Starscream"),
         ]),
     ]
 )
