@@ -1,13 +1,13 @@
 import Foundation
 
 public struct EventFilter: Encodable {
-    let ids: [EventId]?
-    let authors: [String]?
-    let eventKinds: [EventKind]?
-    let tags: [String: [String]]?
-    let since: Timestamp?
-    let until: Timestamp?
-    let limit: Int?
+    public let ids: [EventId]?
+    public let authors: [String]?
+    public let eventKinds: [EventKind]?
+    public let tags: [String: [String]]?
+    public let since: Timestamp?
+    public let until: Timestamp?
+    public let limit: Int?
     
     private enum CodingKeys: String, CodingKey {
         case ids
