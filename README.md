@@ -1,4 +1,4 @@
-# NostrKit 
+# 🗒 NostrKit 
 
 A Swift library providing data types for interacting with a [Nostr](https://github.com/nostr-protocol/nostr) relay.
 
