@@ -44,7 +44,9 @@ let keyPair = try KeyPair(privateKey: "<hex>")
 
 let event = try Event(keyPair: keyPair, content: "Hello NostrKit.")
 
-let message = ClientMessage.event(event)
+let message = ClientMessage
+    .event(event)
+    .string()
 
 // Publish the event by sending `subscribeMessage` 
 // to a relay using a web socket connection of your choice. 
