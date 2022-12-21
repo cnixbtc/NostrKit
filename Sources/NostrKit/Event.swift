@@ -12,6 +12,7 @@ public enum EventKind: Codable, Equatable {
     case setMetadata
     case textNote
     case recommentServer
+    case encryptedDirectMessage
     case custom(Int)
     
     init(id: Int) {
@@ -19,6 +20,7 @@ public enum EventKind: Codable, Equatable {
         case 0: self = .setMetadata
         case 1: self = .textNote
         case 2: self = .recommentServer
+        case 4: self = .encryptedDirectMessage
         default: self = .custom(id)
         }
     }
@@ -28,6 +30,7 @@ public enum EventKind: Codable, Equatable {
         case .setMetadata: return 0
         case .textNote: return 1
         case .recommentServer: return 2
+        case .encryptedDirectMessage: return 4
         case .custom(let customId): return customId
         }
     }
@@ -137,7 +140,9 @@ public struct Event: Codable {
         )
         
         do {
-            let serializedEvent = try JSONEncoder().encode(serializableEvent)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .withoutEscapingSlashes
+            let serializedEvent = try encoder.encode(serializableEvent)
             self.id = Data(SHA256.hash(data: serializedEvent)).hex()
         
             let sig = try keyPair.schnorrSigner.signature(for: serializedEvent)
