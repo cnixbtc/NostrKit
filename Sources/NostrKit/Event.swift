@@ -1,5 +1,6 @@
 import Foundation
 import Crypto
+import secp256k1
 
 public typealias EventId = String
 
@@ -146,7 +147,7 @@ public struct Event: Codable {
             self.id = Data(SHA256.hash(data: serializedEvent)).hex()
         
             let sig = try keyPair.schnorrSigner.signature(for: serializedEvent)
-        
+            
             guard keyPair.schnorrValidator.isValidSignature(sig, for: serializedEvent) else {
                 throw EventError.signingFailed
             }
@@ -157,5 +158,47 @@ public struct Event: Codable {
         } catch {
             throw EventError.signingFailed
         }
+    }
+    
+    public func verified() -> Bool {
+        
+        let serializableEvent = SerializableEvent(publicKey: self.publicKey, createdAt: self.createdAt,
+                                                  kind: self.kind, tags: self.tags, content: self.content)
+        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .withoutEscapingSlashes
+        
+        guard let serializedEvent = try? encoder.encode(serializableEvent) else {
+            return false
+        }
+        
+        let rawId = Data(SHA256.hash(data: serializedEvent))
+        
+        if rawId.hex() != self.id {
+            return false
+        }
+        
+        guard var sig = try? Data(hex: self.signature).bytes else {
+            return false
+        }
+                
+        guard var publicKey = try? Data(hex: self.publicKey).bytes else {
+            return false
+        }
+        
+        guard let ctx = try? secp256k1.Context.create() else {
+            return false
+        }
+        
+        var xOnlyPubkey = secp256k1_xonly_pubkey.init()
+        let xOnlyPubkeyValid = secp256k1_xonly_pubkey_parse(ctx, &xOnlyPubkey, &publicKey) != 0
+        if !xOnlyPubkeyValid {
+            return false
+        }
+        
+        var rawIdBytes = rawId.bytes
+
+        return secp256k1_schnorrsig_verify(ctx, &sig, &rawIdBytes, rawId.count, &xOnlyPubkey) > 0
+
     }
 }
