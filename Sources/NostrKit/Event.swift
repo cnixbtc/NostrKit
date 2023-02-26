@@ -12,7 +12,7 @@ public enum EventError: Error {
 public enum EventKind: Codable, Equatable {
     case setMetadata
     case textNote
-    case recommentServer
+    case recommendServer
     case encryptedDirectMessage
     case custom(Int)
     
@@ -20,7 +20,7 @@ public enum EventKind: Codable, Equatable {
         switch id {
         case 0: self = .setMetadata
         case 1: self = .textNote
-        case 2: self = .recommentServer
+        case 2: self = .recommendServer
         case 4: self = .encryptedDirectMessage
         default: self = .custom(id)
         }
@@ -30,7 +30,7 @@ public enum EventKind: Codable, Equatable {
         switch self {
         case .setMetadata: return 0
         case .textNote: return 1
-        case .recommentServer: return 2
+        case .recommendServer: return 2
         case .encryptedDirectMessage: return 4
         case .custom(let customId): return customId
         }
