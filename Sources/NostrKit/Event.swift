@@ -68,6 +68,10 @@ public struct EventTag: Codable {
         return EventTag(id: "p", otherInformation: publicKey, recommendedRelay?.absoluteString)
     }
     
+    public init(underlyingData: [String]) {
+        self.underlyingData = underlyingData
+    }
+    
     public init(id: String, otherInformation: String?...) {
         underlyingData = [id] + otherInformation.compactMap { $0 }
     }
