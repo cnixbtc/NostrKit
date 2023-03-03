@@ -16,7 +16,7 @@ public enum EventKind: Codable, Equatable {
     case encryptedDirectMessage
     case custom(Int)
     
-    init(id: Int) {
+    public init(id: Int) {
         switch id {
         case 0: self = .setMetadata
         case 1: self = .textNote
