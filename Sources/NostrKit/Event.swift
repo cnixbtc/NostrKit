@@ -125,6 +125,40 @@ public struct Event: Codable {
         case signature = "sig"
     }
     
+    // Used to sign external event
+    public init(keyPair: KeyPair, id: EventId, publicKey: String, createdAt: Timestamp, kind: EventKind, tags: [EventTag], content: String) throws {
+        self.id = id
+        self.publicKey = publicKey
+        self.createdAt = createdAt
+        self.kind = kind
+        self.tags = tags
+        self.content = content
+        if publicKey != keyPair.publicKey { throw EventError.signingFailed }
+        
+        let serializableEvent = SerializableEvent(
+            publicKey: publicKey,
+            createdAt: createdAt,
+            kind: kind,
+            tags: tags,
+            content: content
+        )
+        
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .withoutEscapingSlashes
+            let serializedEvent = try encoder.encode(serializableEvent)
+            let sig = try keyPair.schnorrSigner.signature(for: serializedEvent)
+            guard keyPair.schnorrValidator.isValidSignature(sig, for: serializedEvent) else {
+                throw EventError.signingFailed
+            }
+            self.signature = sig.rawRepresentation.hex()
+        } catch is EncodingError {
+            throw EventError.encodingFailed
+        } catch {
+            throw EventError.signingFailed
+        }
+    }
+    
     public init(keyPair: KeyPair, kind: EventKind = .textNote, tags: [EventTag] = [], content: String) throws {
         publicKey = keyPair.publicKey
         createdAt = Timestamp(date: Date())
