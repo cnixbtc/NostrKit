@@ -1,5 +1,6 @@
 import Foundation
 import Crypto
+import secp256k1
 
 public typealias EventId = String
 
@@ -11,14 +12,16 @@ public enum EventError: Error {
 public enum EventKind: Codable, Equatable {
     case setMetadata
     case textNote
-    case recommentServer
+    case recommendServer
+    case encryptedDirectMessage
     case custom(Int)
     
-    init(id: Int) {
+    public init(id: Int) {
         switch id {
         case 0: self = .setMetadata
         case 1: self = .textNote
-        case 2: self = .recommentServer
+        case 2: self = .recommendServer
+        case 4: self = .encryptedDirectMessage
         default: self = .custom(id)
         }
     }
@@ -27,7 +30,8 @@ public enum EventKind: Codable, Equatable {
         switch self {
         case .setMetadata: return 0
         case .textNote: return 1
-        case .recommentServer: return 2
+        case .recommendServer: return 2
+        case .encryptedDirectMessage: return 4
         case .custom(let customId): return customId
         }
     }
@@ -62,6 +66,10 @@ public struct EventTag: Codable {
     
     public static func pubKey(publicKey: String, recommendedRelay: URL? = nil) -> EventTag {
         return EventTag(id: "p", otherInformation: publicKey, recommendedRelay?.absoluteString)
+    }
+    
+    public init(underlyingData: [String]) {
+        self.underlyingData = underlyingData
     }
     
     public init(id: String, otherInformation: String?...) {
@@ -121,6 +129,40 @@ public struct Event: Codable {
         case signature = "sig"
     }
     
+    // Used to sign external event
+    public init(keyPair: KeyPair, id: EventId, publicKey: String, createdAt: Timestamp, kind: EventKind, tags: [EventTag], content: String) throws {
+        self.id = id
+        self.publicKey = publicKey
+        self.createdAt = createdAt
+        self.kind = kind
+        self.tags = tags
+        self.content = content
+        if publicKey != keyPair.publicKey { throw EventError.signingFailed }
+        
+        let serializableEvent = SerializableEvent(
+            publicKey: publicKey,
+            createdAt: createdAt,
+            kind: kind,
+            tags: tags,
+            content: content
+        )
+        
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .withoutEscapingSlashes
+            let serializedEvent = try encoder.encode(serializableEvent)
+            let sig = try keyPair.schnorrSigner.signature(for: serializedEvent)
+            guard keyPair.schnorrValidator.isValidSignature(sig, for: serializedEvent) else {
+                throw EventError.signingFailed
+            }
+            self.signature = sig.rawRepresentation.hex()
+        } catch is EncodingError {
+            throw EventError.encodingFailed
+        } catch {
+            throw EventError.signingFailed
+        }
+    }
+    
     public init(keyPair: KeyPair, kind: EventKind = .textNote, tags: [EventTag] = [], content: String) throws {
         publicKey = keyPair.publicKey
         createdAt = Timestamp(date: Date())
@@ -137,11 +179,13 @@ public struct Event: Codable {
         )
         
         do {
-            let serializedEvent = try JSONEncoder().encode(serializableEvent)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .withoutEscapingSlashes
+            let serializedEvent = try encoder.encode(serializableEvent)
             self.id = Data(SHA256.hash(data: serializedEvent)).hex()
         
             let sig = try keyPair.schnorrSigner.signature(for: serializedEvent)
-        
+            
             guard keyPair.schnorrValidator.isValidSignature(sig, for: serializedEvent) else {
                 throw EventError.signingFailed
             }
@@ -152,5 +196,47 @@ public struct Event: Codable {
         } catch {
             throw EventError.signingFailed
         }
+    }
+    
+    public func verified() -> Bool {
+        
+        let serializableEvent = SerializableEvent(publicKey: self.publicKey, createdAt: self.createdAt,
+                                                  kind: self.kind, tags: self.tags, content: self.content)
+        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .withoutEscapingSlashes
+        
+        guard let serializedEvent = try? encoder.encode(serializableEvent) else {
+            return false
+        }
+        
+        let rawId = Data(SHA256.hash(data: serializedEvent))
+        
+        if rawId.hex() != self.id {
+            return false
+        }
+        
+        guard var sig = try? Data(hex: self.signature).bytes else {
+            return false
+        }
+                
+        guard var publicKey = try? Data(hex: self.publicKey).bytes else {
+            return false
+        }
+        
+        guard let ctx = try? secp256k1.Context.create() else {
+            return false
+        }
+        
+        var xOnlyPubkey = secp256k1_xonly_pubkey.init()
+        let xOnlyPubkeyValid = secp256k1_xonly_pubkey_parse(ctx, &xOnlyPubkey, &publicKey) != 0
+        if !xOnlyPubkeyValid {
+            return false
+        }
+        
+        var rawIdBytes = rawId.bytes
+
+        return secp256k1_schnorrsig_verify(ctx, &sig, &rawIdBytes, rawId.count, &xOnlyPubkey) > 0
+
     }
 }
